@@ -1,9 +1,8 @@
 from fastapi import Depends, FastAPI, Response, HTTPException, status, APIRouter
-import psycopg2
 from psycopg2.extras import RealDictCursor
-import time
 from sqlalchemy.orm import Session
 from typing import List
+from app.oauth import get_current_user
 from .. import schema
 from .. import models
 from ..database import get_db
@@ -16,18 +15,18 @@ router = APIRouter(
 
 
 @router.get("/", response_model=List[schema.PostResponse])
-def get_posts(db: Session = Depends(get_db)):
+def get_posts(db: Session = Depends(get_db),
+              tokenData: schema.TokenData = Depends(get_current_user)):
     # Query directly to the db
     # cursor.execute("""SELECT * FROM posts""")
     # posts = cursor.fetchall()
-
     # Query using sqlalchemy
     posts = db.query(models.Post).all()
     return posts
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schema.PostResponse,)
-def create_posts(post: schema.PostCreate, db: Session = Depends(get_db)):
+def create_posts(post: schema.PostCreate, db: Session = Depends(get_db),  tokenData: schema.TokenData = Depends(get_current_user)):
 
     # Query directly to the db
     # we use this way instad f formating, for avoid sql injection
@@ -46,7 +45,7 @@ def create_posts(post: schema.PostCreate, db: Session = Depends(get_db)):
 
 
 @router.get('/{id}', response_model=schema.PostResponse)
-def get_post(id: int, response: Response, db: Session = Depends(get_db),):
+def get_post(id: int, response: Response, db: Session = Depends(get_db), tokenData: schema.TokenData = Depends(get_current_user)):
 
     # Query directly to the db
     #cursor.execute("""SELECT * FROM posts WHERE posts.id = %s""", (str(id)))
@@ -65,7 +64,7 @@ def get_post(id: int, response: Response, db: Session = Depends(get_db),):
 
 
 @router.delete('/', status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(id: int, db: Session = Depends(get_db)):
+def delete_post(id: int, db: Session = Depends(get_db),  tokenData: schema.TokenData = Depends(get_current_user)):
 
     # Query directly to the db
     # cursor.execute(
@@ -85,8 +84,8 @@ def delete_post(id: int, db: Session = Depends(get_db)):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.put('/{id}', response_model=schema.PostResponse)
-def update_post(id: int, post: schema.PostCreate,  db: Session = Depends(get_db), ):
+@router.put('/{id}', response_model=schema.PostResponse, )
+def update_post(id: int, post: schema.PostCreate,  db: Session = Depends(get_db),  tokenData: schema.TokenData = Depends(get_current_user)):
     # Query directly to the db
     # cursor.execute(
     #    """UPDATE posts SET title = %s, content = %s, published = %s, rating = %s  WHERE id = %s RETURNING *""", (

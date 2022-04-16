@@ -38,3 +38,17 @@ class UserResponse(UserBase):
 
     class Config:
         orm_mode = True
+
+
+class UserLoginCommand(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class UserLoginResponse(BaseModel):
+    email: EmailStr
+    token: str
+
+
+class TokenData(BaseModel):
+    id: Optional[int]
