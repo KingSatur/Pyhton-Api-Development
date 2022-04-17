@@ -2,16 +2,10 @@ from datetime import datetime, timedelta
 from fastapi import Depends, status, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+from .config import settings
 
 from app import schema
 
-
-# SECRET_KEY
-SECRET_KEY = "n?>Qe.,m123 .apo123jo123;l12;3'qe';qwe';wqe"
-# Algorithm
-ALGORITHM = "HS256"
-# Expiration
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="auth/login")
@@ -19,17 +13,19 @@ oauth2_scheme = OAuth2PasswordBearer(
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.utcnow() + timedelta(minutes=settings.expire_time)
     to_encode.update({"exp": expire})
 
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(
+        to_encode, settings.secret_key, algorithm=settings.algorithm)
 
     return encoded_jwt
 
 
 def verify_access_token(token: str, exception):
     try:
-        payload = jwt.decode(token, key=SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, key=settings.secret_key,
+                             algorithms=[settings.algorithm])
         id: str = payload.get("user_id")
         token_data = schema.TokenData(id=id)
         if id is None:

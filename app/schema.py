@@ -14,14 +14,6 @@ class PostCreate(PostBase):
     pass
 
 
-class PostResponse(PostBase):
-    id: int
-    created_at: datetime
-
-    class Config:
-        orm_mode = True
-
-
 class UserBase(BaseModel):
     firstName: str
     lastName: str
@@ -52,3 +44,12 @@ class UserLoginResponse(BaseModel):
 
 class TokenData(BaseModel):
     id: Optional[int]
+
+
+class PostResponse(PostBase):
+    id: int
+    created_at: datetime
+    owner: UserResponse
+
+    class Config:
+        orm_mode = True

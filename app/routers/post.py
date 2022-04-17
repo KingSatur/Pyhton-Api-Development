@@ -1,7 +1,6 @@
-from fastapi import Depends, FastAPI, Response, HTTPException, status, APIRouter
-from psycopg2.extras import RealDictCursor
+from fastapi import Depends,  Response, HTTPException, status, APIRouter
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from app.oauth import get_current_user
 from .. import schema
 from .. import models
@@ -14,14 +13,17 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=List[schema.PostResponse])
+@router.get("/", response_model=List[schema.PostResponse],)
 def get_posts(db: Session = Depends(get_db),
-              tokenData: schema.TokenData = Depends(get_current_user)):
+              tokenData: schema.TokenData = Depends(get_current_user), limit: int = 10, page: int = 1, search: Optional[str] = ""):
     # Query directly to the db
     # cursor.execute("""SELECT * FROM posts""")
     # posts = cursor.fetchall()
     # Query using sqlalchemy
-    posts = db.query(models.Post).all()
+    offset = ((page - 1) * limit)
+    posts = db.query(models.Post).filter(
+        models.Post.user_id == tokenData.id, models.Post.title.contains(search)).limit(limit).offset(offset).all()
+
     return posts
 
 
@@ -37,7 +39,7 @@ def create_posts(post: schema.PostCreate, db: Session = Depends(get_db),  tokenD
 
     # Query using sqlalchemy
     # **post.dict() is like ...obj in javascript
-    new_post = models.Post(**post.dict())
+    new_post = models.Post(user_id=tokenData.id, **post.dict())
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
@@ -57,13 +59,16 @@ def get_post(id: int, response: Response, db: Session = Depends(get_db), tokenDa
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"post with id: {id} was not found")
+    if post.user_id != tokenData.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail=f"forbidden operation")
 #         response.status_code = HTTPStatus.NOT_FOUND
 #         return {"message": "the post was not found"}
 
     return post
 
 
-@router.delete('/', status_code=status.HTTP_204_NO_CONTENT)
+@router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id: int, db: Session = Depends(get_db),  tokenData: schema.TokenData = Depends(get_current_user)):
 
     # Query directly to the db
@@ -73,11 +78,16 @@ def delete_post(id: int, db: Session = Depends(get_db),  tokenData: schema.Token
     # conn.commit()
 
     # Using sqlalchemy
+
     query = db.query(models.Post).filter(models.Post.id == id)
 
     if query.first() is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"post with id: {id} was not found")
+
+    if query.first().user_id != tokenData.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail=f"forbidden operation")
 
     query.delete(synchronize_session=False)
     db.commit()
@@ -100,6 +110,10 @@ def update_post(id: int, post: schema.PostCreate,  db: Session = Depends(get_db)
     if query.first() is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"post with id: {id} was not found")
+
+    if query.first().user_id != tokenData.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail=f"forbidden operation")
 
     query.update(post.dict(), synchronize_session=False)
     db.commit()
