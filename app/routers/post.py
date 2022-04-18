@@ -1,4 +1,5 @@
 from fastapi import Depends,  Response, HTTPException, status, APIRouter
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.oauth import get_current_user
@@ -13,16 +14,20 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=List[schema.PostResponse],)
+@router.get("/", response_model=List[schema.PostResponse])
 def get_posts(db: Session = Depends(get_db),
               tokenData: schema.TokenData = Depends(get_current_user), limit: int = 10, page: int = 1, search: Optional[str] = ""):
     # Query directly to the db
     # cursor.execute("""SELECT * FROM posts""")
     # posts = cursor.fetchall()
+
     # Query using sqlalchemy
     offset = ((page - 1) * limit)
-    posts = db.query(models.Post).filter(
-        models.Post.user_id == tokenData.id, models.Post.title.contains(search)).limit(limit).offset(offset).all()
+    posts = db.query(models.Post, func.count(models.Vote.post_id).label('votes')).filter(models.Post.title.contains(search))\
+        .join(models.Vote, models.Vote.post_id == models.Post.id, isouter=True)\
+        .group_by(models.Post.id)\
+        .limit(limit)\
+        .offset(offset).all()
 
     return posts
 
@@ -54,18 +59,22 @@ def get_post(id: int, response: Response, db: Session = Depends(get_db), tokenDa
     #post = cursor.fetchone()
 
     # Using sqlalchemy
-    post = db.query(models.Post).filter(models.Post.id == id).first()
+    postQuery = db.query(models.Post,  func.count(models.Vote.post_id).label('votes'))\
+        .join(models.Vote, models.Vote.post_id == models.Post.id, isouter=True)\
+        .group_by(models.Post.id)\
+        .filter(models.Post.id == id)\
+        .first()
 
-    if not post:
+    if not postQuery:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"post with id: {id} was not found")
-    if post.user_id != tokenData.id:
+    if postQuery.Post.user_id != tokenData.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail=f"forbidden operation")
 #         response.status_code = HTTPStatus.NOT_FOUND
 #         return {"message": "the post was not found"}
 
-    return post
+    return postQuery
 
 
 @router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
