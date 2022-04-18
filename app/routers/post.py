@@ -32,7 +32,7 @@ def get_posts(db: Session = Depends(get_db),
     return posts
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=schema.PostResponse,)
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=schema.PostCreateResponse,)
 def create_posts(post: schema.PostCreate, db: Session = Depends(get_db),  tokenData: schema.TokenData = Depends(get_current_user)):
 
     # Query directly to the db
@@ -51,7 +51,7 @@ def create_posts(post: schema.PostCreate, db: Session = Depends(get_db),  tokenD
     return new_post
 
 
-@router.get('/{id}', response_model=schema.PostResponse)
+@router.get('/{id}', response_model=schema.PostCreateResponse)
 def get_post(id: int, response: Response, db: Session = Depends(get_db), tokenData: schema.TokenData = Depends(get_current_user)):
 
     # Query directly to the db

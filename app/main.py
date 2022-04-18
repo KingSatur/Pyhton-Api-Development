@@ -14,7 +14,10 @@ app.include_router(user.router)
 app.include_router(auth.router)
 app.include_router(vote.router)
 
-Base.metadata.create_all(bind=engine)
+
+# Tells sqlalchemy run the create scripts for the models to generate all the tables
+# now, is not needed because of alembic
+# Base.metadata.create_all(bind=engine)
 
 
 @app.get("/")

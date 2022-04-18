@@ -57,6 +57,15 @@ class PostEmbedded(PostBase):
         orm_mode = True
 
 
+class PostCreateResponse(PostBase):
+    id: int
+    created_at: datetime
+    owner: UserResponse
+
+    class Config:
+        orm_mode = True
+
+
 class PostResponse(BaseModel):
     Post: PostEmbedded
     votes: int
