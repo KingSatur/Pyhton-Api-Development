@@ -1,0 +1,14 @@
+[Unit]
+Description=demo fastapi application
+After=network.target
+
+[Service]
+User=postgresql_actor
+Group=postgresql_actor
+WorkingDirectory=/home/postgresql_actor/app/src/
+Environment="PATH=/home/postgresql_actor/app/venv/bin"
+EnvironmentFile=/home/postgresql_actor/.env
+ExecStart=/home/postgresql_actor/app/venv/bin/gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:8000
+
+[Install]
+WantedBy=multi-user.target
